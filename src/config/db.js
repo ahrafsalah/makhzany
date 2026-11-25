@@ -1,14 +1,23 @@
 import mongoose from "mongoose";
 
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
 export async function connectDB(uri) {
   if (!uri) {
     throw new Error("MONGODB_URI is not defined in environment variables");
   }
 
-  mongoose.connection.on("disconnected", () => {
-    console.warn("MongoDB disconnected");
-  });
+  if (cached.conn) {
+    return cached.conn;
+  }
 
-  await mongoose.connect(uri);
-  console.log("Connected to MongoDB");
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(uri).then((m) => m);
+  }
+
+  cached.conn = await cached.promise;
+  return cached.conn;
 }
